@@ -1,9 +1,14 @@
-use headless_chrome::{types::PrintToPdfOptions, Browser, LaunchOptions};
+use headless_chrome::{protocol::cdp::Page::CaptureScreenshotFormatOption, Browser, LaunchOptions};
 
 mod tests;
 
+pub type PDFOptions = headless_chrome::types::PrintToPdfOptions;
+
 pub enum Settings {
-    PDF(Option<PrintToPdfOptions>),
+    PDF(Option<PDFOptions>),
+    JPEG,
+    PNG,
+    WebP,
 }
 
 pub fn print(html: &str, width: u32, height: u32, settings: Settings) -> Result<Vec<u8>, String> {
@@ -39,11 +44,33 @@ pub fn print(html: &str, width: u32, height: u32, settings: Settings) -> Result<
         return Result::Err(err.to_string());
     }
 
+    if let Err(err) = tab.wait_until_navigated() {
+        return Result::Err(err.to_string());
+    }
+
     let raw = match settings {
         Settings::PDF(options) => match tab.print_to_pdf(options) {
             Ok(pdf) => pdf,
             Err(err) => return Result::Err(err.to_string()),
         },
+        Settings::JPEG => {
+            match tab.capture_screenshot(CaptureScreenshotFormatOption::Jpeg, None, None, true) {
+                Ok(jpg) => jpg,
+                Err(err) => return Result::Err(err.to_string()),
+            }
+        }
+        Settings::PNG => {
+            match tab.capture_screenshot(CaptureScreenshotFormatOption::Png, None, None, true) {
+                Ok(png) => png,
+                Err(err) => return Result::Err(err.to_string()),
+            }
+        }
+        Settings::WebP => {
+            match tab.capture_screenshot(CaptureScreenshotFormatOption::Webp, None, None, true) {
+                Ok(web) => web,
+                Err(err) => return Result::Err(err.to_string()),
+            }
+        }
     };
 
     Result::Ok(raw)
